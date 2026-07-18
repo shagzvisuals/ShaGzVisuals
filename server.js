@@ -4,7 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
-const PORT = process.env.PORT || 3000;   // Важно для Render
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -40,9 +40,9 @@ function generateCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Send code
+// Send verification code
 app.post('/api/send-code', async (req, res) => {
-    const { email, username, password } = req.body;
+    const { email } = req.body;
 
     if (!email) {
         return res.status(400).json({ success: false, message: 'Email is required' });
@@ -54,31 +54,30 @@ app.post('/api/send-code', async (req, res) => {
     verificationCodes.set(email, {
         code,
         expires,
-        userData: { username, password }
+        userData: req.body
     });
 
     const mailOptions = {
         from: 'ShaGZVisuals <shagzvisuals@gmail.com>',
         to: email,
-        subject: 'Your Verification Code',
+        subject: 'Ваш код подтверждения',
         html: `
             <div style="font-family: Arial, sans-serif; padding: 20px; background: #1a1a1a; color: #ffffff;">
                 <h1 style="color: #a855f7;">ShaGZVisuals</h1>
-                <h2>Email Verification</h2>
-                <p>Your verification code is:</p>
+                <h2>Подтверждение email</h2>
+                <p>Ваш код подтверждения:</p>
                 <h1 style="color: #a855f7; font-size: 48px; letter-spacing: 10px; text-align: center; padding: 20px; background: #2d1b4e; border-radius: 10px;">${code}</h1>
-                <p>This code is valid for <strong>5 minutes</strong>.</p>
-                <p>If you didn't request this code, please ignore this email.</p>
+                <p>Код действителен <strong>5 минут</strong>.</p>
             </div>
         `
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        res.json({ success: true, message: 'Verification code sent' });
+        res.json({ success: true, message: 'Код отправлен на email' });
     } catch (error) {
         console.error('Email error:', error);
-        res.status(500).json({ success: false, message: 'Failed to send email' });
+        res.status(500).json({ success: false, message: 'Ошибка отправки письма' });
     }
 });
 
@@ -87,30 +86,30 @@ app.post('/api/verify-code', (req, res) => {
     const { email, code } = req.body;
 
     if (!email || !code) {
-        return res.status(400).json({ success: false, message: 'Email and code required' });
+        return res.status(400).json({ success: false, message: 'Email и код обязательны' });
     }
 
     const stored = verificationCodes.get(email);
 
-    if (!stored) return res.json({ success: false, message: 'No code found' });
+    if (!stored) return res.json({ success: false, message: 'Код не найден' });
     if (Date.now() > stored.expires) {
         verificationCodes.delete(email);
-        return res.json({ success: false, message: 'Code expired' });
+        return res.json({ success: false, message: 'Код устарел' });
     }
     if (stored.code !== code) {
-        return res.json({ success: false, message: 'Invalid code' });
+        return res.json({ success: false, message: 'Неверный код' });
     }
 
     verificationCodes.delete(email);
 
     res.json({
         success: true,
-        message: 'Email verified',
+        message: 'Email успешно подтверждён',
         userData: stored.userData
     });
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`✅ Server running on port ${PORT}`);
 });
